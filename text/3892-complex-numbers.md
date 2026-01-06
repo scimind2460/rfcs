@@ -24,7 +24,7 @@ extern "C" {
   fn computes_function(x: Complex<f64>) -> Complex<f64>;
 }
 fn main() {
-  let returned_value = computes_function(Complex<f64>::new(3, 4))
+  let returned_value = computes_function(Complex::<f64>::new(3.0, 4.0))
 }
 ```
 using the standard library's FFI-compatible complex numbers.
