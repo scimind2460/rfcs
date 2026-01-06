@@ -44,10 +44,6 @@ or as a tuple:
 ```rust
 let z = Complex::from((3.0, 4.0));
 ```
-They can even be passed in polar form (but only as a float):
-```rust
-let polar = Complex::from_polar(3.0, f32::PI/2.0);
-```
 They are added and multiplied as complexes are:
 ```rust
 let first = Complex::new(1.0, 2.0);
