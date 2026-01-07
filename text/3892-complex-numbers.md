@@ -11,9 +11,9 @@ FFI-compatible and calling-convention-compatible complex types are to be introdu
 ## Motivation
 [motivation]: #motivation
 
-The definition of complex numbers in the C99 standard defines the _memory layout_ of a complex number but not its _calling convention_. 
-This makes crates like `num-complex` untenable for calling C FFI functions containing complex numbers without at least a level of indirection (`*const Complex`) or the like.
-Only in `std` is it possible to make an additional repr to match the calling convention that C uses across FFI boundaries. 
+The C standard defines the _memory layout_ of a complex number, but not their _calling convention_. 
+This means crates like `num-complex` require workarounds to interface with FFI using `_Complex`, and cannot pass values directly.
+
 In essence, this RFC makes code like this:
 ```C
 extern double _Complex computes_function(double _Complex x);
