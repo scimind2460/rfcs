@@ -31,19 +31,12 @@ using the standard library's FFI-compatible complex numbers.
 
 ## Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
-
+`Complex<T>` numbers are in core::num and reexported in std::num, like `use core::num::Complex` or `use std::num::Complex`
 `Complex<T>` numbers can be instantiated with any component type using `Complex::new(re, im)` where `re` and `im` are of the same type ( includes all numbers).
 ```rust
 let x = Complex::new(3.0, 4.0);
 ```
-They can even be passed as an array:
-```rust
-let y = Complex::from([3.0, 4.0]);
-```
-or as a tuple:
-```rust
-let z = Complex::from((3.0, 4.0));
-```
+
 Simple arithmetic is supported:
 
 ```rust
@@ -55,13 +48,6 @@ let c = first * second; // -5 + 10i
 let d = float_second / float_first; // 0.44 - 0.8imi
 ```
 
-You can even calculate the complex sine, cosine and more:
-```rust
-let val = Complex::new(3.0, 4.0);
-let sine_cmplx = csin(val); // 3.8537380379 - 27.016813258i
-```
-This type is FFI-compatible with `_Complex` in C for floating point types.
-
 ## Reference-level explanation
 [reference-level-explanation]: #reference-level-explanation
 
@@ -70,22 +56,15 @@ Calls to some `libgcc` functions may also be needed, and will be emitted by the 
 They will have an internal representation similar to this (with public fields for real and imaginary parts):
 ```rust
 // in core::complex
-#[lang = "complex"]
+#[lang = "complex"] // for calling convention.
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Complex<T> {pub re: T, pub im: T};
 ```
-have construction methods and `From` impls:
+have a constructor
 ```rust
 impl Complex<T> {
   fn new(re: T, im: T) -> Self;
-}
-
-impl<T> From<(T, T)> for Complex<T> {
-  fn from(value: (T, T)) -> Self;
-}
-impl<T> From<[T; 2]> for Complex<T> {
-  fn from(value: [T; 2]) -> Self;
 }
 ```
 and have arithmetic implementations similar to this:
@@ -100,7 +79,6 @@ impl Mul for Complex<f64> { type Output = Self; /* ... */ }
 impl Div for Complex<f64> { type Output = Self; /* ... */ }
 // Also f16, f32, and f128
 ```
-The floating point numbers shall have sine and cosine and tangent functions, their inverses, their hyperbolic variants, and their inverses defined as per the C standard and with Infinity and NaN values defined as per the C standard.
 ## Drawbacks
 [drawbacks]: #drawbacks
 
@@ -112,8 +90,7 @@ Also, the multiple emitted calls to `libgcc.so` (`__mulsc3` and the like) via co
 
 The rationale for this type is mostly FFI: C libraries that may be linked from Rust code currently cannot provide functions with direct struct implementations of Complex - they must be hidden under at least a layer of indirection. This is because of the undefined calling convention of complex numbers in C. For example: on powerpc64-linux-gnu, [returning double _Complex doesn't do the same thing as returning a struct with a field of type double[2].](https://gcc.godbolt.org/z/hh7zYcnK6) However, it is not always possible to write a C complex-valued function that wraps the first function in a pointer. Thus, FFI becomes a problem if such complex-valued functions are passed by value and not by reference.  
 
-Additionally, this provides a unified API for complex numbers. Right now, many crates define their own complex types, making interoperability complicated. `num-complex` and `nalgebra` are two such crates that define their own complex types to fit different levels of interoperability concerns, but often exist in the same crate graph and require conversion.
-
+Additionally, this provides a unified API for complex numbers. Right now, many crates define their own complex types, making interoperability complicated, even though `num-complex` already exports its own type. (`rug::Complex` being an example)
 You could theoretically do something like this:
 ```c
 double _Complex function(double _Complex value);
@@ -180,3 +157,4 @@ that could help simplify the life of people who otherwise would have to keep wri
 - We should also think about a `Display` implementation. Should we support something like `1 + 2i` or something else? Should we not make a `Display` impl at all, and just use re() and im() for the implementation?
 - We should also consider adding aliases (like c32 and c64) for floating points once they are established, to allow for a shorthand syntax.
 - Eventually, we should also consider adding polar conversions (e.g, `modulus` and `angle`)
+- And also, we should consider adding complex trig functions (`csin`, `ccos`, etc.) that were deliberately left out of the MVP.
