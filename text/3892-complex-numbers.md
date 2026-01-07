@@ -44,19 +44,15 @@ or as a tuple:
 ```rust
 let z = Complex::from((3.0, 4.0));
 ```
-They are added and multiplied as complexes are:
+Simple arithmetic is supported:
+
 ```rust
 let first = Complex::new(1.0, 2.0);
 let second = Complex::new(3.0, 4.0);
-let added = first + second; // 4 + 6i
-let multiplied = first * second; // -4 + 10i
-```
-
-They can be divided using normal floating-point division:
-```rust
-let float_first = Complex::new(1.0, 2.0);
-let float_second = Complex::new(3.0, 4.0);
-let divided = float_second / float_first; // 2.4 - 0.2i
+let a = first + second; // 4 + 6i
+let b = first - second; // -2 - 2i
+let c = first * second; // -5 + 10i
+let d = float_second / float_first; // 0.44 - 0.8imi
 ```
 
 You can even calculate the complex sine, cosine and more:
@@ -64,20 +60,7 @@ You can even calculate the complex sine, cosine and more:
 let val = Complex::new(3.0, 4.0);
 let sine_cmplx = csin(val); // 3.8537380379 - 27.016813258i
 ```
-If you want to call certain C libraries with complex numbers, you use this type:
-```C
-// in the C library
-extern double _Complex computes_function(double _Complex x);
-```
-```rust
-// in YOUR Rust code
-extern "C" {
-  fn computes_function(x: Complex<f64>) -> Complex<f64>;
-}
-fn main() {
-  let returned_value = computes_function(Complex::<f64>::new(3.0, 4.0))
-}
-```
+This type is FFI-compatible with `_Complex` in C for floating point types.
 
 ## Reference-level explanation
 [reference-level-explanation]: #reference-level-explanation
@@ -107,38 +90,15 @@ impl<T> From<[T; 2]> for Complex<T> {
 ```
 and have arithmetic implementations similar to this:
 ```rust
-impl<T: Add> Add for Complex<T> { // and for corresponding real types
-  type Output = Self;
+// `Add` and `Sub` work on individual components so can be used with any `T`
+impl<T: Add> Add for Complex<T> { type Output = Self; /* ... */ }
+impl<T: Sub> Sub for Complex<T> { type Output = Self; /* ... */ }
 
-  fn add(self, other: Self) -> Self::Output;
-}
-
-impl<T: Sub> Sub for Complex<T> { // and for corresponding real types 
-  type Output = Self;
-
-  fn sub(self, other: Self) -> Self::Output;
-}
-```rust
-impl Mul for Complex<f32> { // calls to __mulsc3 will be required here for implementation details and corresponding real types will also be implemented
-  type Output = Self;
-
-  fn mul(self, other: Self) -> Self::Output;
-}
-impl Mul for Complex<f64> { // calls to __muldc3 will be required here for implementation details and corresponding real types will also be implemented
-  type Output = Self;
-
-  fn mul(self, other: Self) -> Self::Output;
-}
-impl Div for Complex<f32> { // calls to __divsc3 will be required here for implementation details and corresponding real types will also be implemented
-  type Output = Self;
-
-  fn div(self, other: Self) -> Self::Output;
-}
-impl Div for Complex<f64> { // calls to __divdc3 will be required here for implementation details and corresponding real types will also be implemented
-  type Output = Self;
-
-  fn div(self, other: Self) -> Self::Output;
-}
+// `Mul` and `Div` may not work for all types in a generic way, so they are
+// implemented only on concrete types. 
+impl Mul for Complex<f64> { type Output = Self; /* ... */ }
+impl Div for Complex<f64> { type Output = Self; /* ... */ }
+// Also f16, f32, and f128
 ```
 The floating point numbers shall have sine and cosine and tangent functions, their inverses, their hyperbolic variants, and their inverses defined as per the C standard and with Infinity and NaN values defined as per the C standard.
 ## Drawbacks
@@ -151,7 +111,8 @@ Also, the multiple emitted calls to `libgcc.so` (`__mulsc3` and the like) via co
 [rationale-and-alternatives]: #rationale-and-alternatives
 
 The rationale for this type is mostly FFI: C libraries that may be linked from Rust code currently cannot provide functions with direct struct implementations of Complex - they must be hidden under at least a layer of indirection. This is because of the undefined calling convention of complex numbers in C. For example: on powerpc64-linux-gnu, [returning double _Complex doesn't do the same thing as returning a struct with a field of type double[2].](https://gcc.godbolt.org/z/hh7zYcnK6) However, it is not always possible to write a C complex-valued function that wraps the first function in a pointer. Thus, FFI becomes a problem if such complex-valued functions are passed by value and not by reference.  
-Additionally, another issue this solves is to have a unified API for complex numbers. Right now, many crates are using their own implementation (`num-complex` could serve as a unifying factor, but other crates do not implement the same complex numbers, such as `nalgebra`, due to less care over incompatibility concerns), which makes it difficult to implement unifying interfaces without complicating the code with too many conversion functions. This serves a problem for crates that use different implementations of complex numbers for different tasks (`sprs` relying on `num-complex` and `nalgebra` implementing its own variation)
+
+Additionally, this provides a unified API for complex numbers. Right now, many crates define their own complex types, making interoperability complicated. `num-complex` and `nalgebra` are two such crates that define their own complex types to fit different levels of interoperability concerns, but often exist in the same crate graph and require conversion.
 
 You could theoretically do something like this:
 ```c
