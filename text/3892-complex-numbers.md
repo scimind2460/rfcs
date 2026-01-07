@@ -55,7 +55,7 @@ The `core` crate will provide implementations for operator traits for possible c
 Calls to some `libgcc` functions may also be needed, and will be emitted by the backend via compiler-builtins, specifically `__mulsc3`, `__muldc3`, `__divsc3` and `__divdc3` for the proper and complete implementation of these types. This is because if we implemented these operations generically, to implement any overflow checks, we would need to implement a trait that can generically call, say, a `max()` function and compare between values. `Add` and `Sub` do not have this problem (as they are relatively straightforward and do not hold any intermediate values)
 They will have an internal representation similar to this (with public fields for real and imaginary parts):
 ```rust
-// in core::complex
+// in core::num::complex, which would be a private module holding complex types
 #[lang = "complex"] // for calling convention.
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -82,8 +82,7 @@ impl Div for Complex<f64> { type Output = Self; /* ... */ }
 ## Drawbacks
 [drawbacks]: #drawbacks
 
-The implementation surface of the complex types means more items for the libs and lang teams to maintain.
-Also, the multiple emitted calls to `libgcc.so` (`__mulsc3` and the like) via compiler-builtins may cause a bit of overhead and may not be what the Rust lang team and compiler team want.
+The multiple emitted calls to `libgcc.so` (`__mulsc3` and the like) via compiler-builtins may cause a bit of overhead and may not be what the Rust lang team and compiler team want.
 
 ## Rationale and alternatives
 [rationale-and-alternatives]: #rationale-and-alternatives
@@ -129,7 +128,6 @@ Many crates, like `num-complex` also provide this feature, though it is not FFI-
 ## Unresolved questions
 [unresolved-questions]: #unresolved-questions
 
-Should this type be in `core::ffi`? This type's purpose is mostly FFI, but it might be useful in library contexts as well, so I am not sure if we should place it in `core::ffi`.
 
 ## Future possibilities
 [future-possibilities]: #future-possibilities
