@@ -45,7 +45,7 @@ let second = Complex::new(3.0, 4.0);
 let a = first + second; // 4 + 6i
 let b = first - second; // -2 - 2i
 let c = first * second; // -5 + 10i
-let d = float_second / float_first; // 0.44 - 0.8imi
+let d = float_second / float_first; // 0.44 - 0.8i
 ```
 
 ## Reference-level explanation
